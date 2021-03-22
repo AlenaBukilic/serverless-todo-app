@@ -9,6 +9,17 @@ provider:
   name: aws
   runtime: nodejs14.x
 
+  tracing:
+    lambda: true
+    apiGateway: true
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
 
@@ -165,7 +176,7 @@ resources:
                   - lambda.amazonaws.com
               Action: sts:AssumeRole
         Policies:
-          - PolicyName: s3AccessPolicy
+          - PolicyName: s3AccessPolicyAndUpdateTodosDynamoPolicy
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
@@ -174,6 +185,21 @@ resources:
                     - s3:PutObject
                     - s3:GetObject
                   Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*
+                - Effect: Allow
+                  Action:
+                    - dynamodb:UpdateItem
+                  Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+                - Effect: Allow
+                  Action:
+                    - dynamodb:Query
+                  Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/${self:provider.environment.TODO_ID_INDEX}
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource:
+                    - arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/*:*:*
 
     CustomRoleForGetTodos:
       Type: AWS::IAM::Role
@@ -192,6 +218,10 @@ resources:
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
+                - Effect: Allow
+                  Action:
+                    - s3:GetObject
+                  Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*
                 - Effect: Allow
                   Action:
                     - dynamodb:Query
