@@ -13,6 +13,10 @@ export function createTodoItem(createRequest: CreateTodoRequest) {
     return todoAccessor.createTodoItem(createRequest)
 }
 
+export function getTodoItemById(todoItemId: string) {
+    return todoAccessor.getTodoItemById(todoItemId)
+}
+
 export async function updateTodoItemForUser(userId: string, todoItemId: string, updateTodoRequest: UpdateTodoRequest) {
     const item = await todoAccessor.getTodoItemById(todoItemId)
 

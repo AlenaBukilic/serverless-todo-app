@@ -62,16 +62,15 @@ export class todoAccess {
     async updateTodoItem(todoItem: TodoItem, updateTodoRequest: UpdateTodoRequest) {
 
         const params = this.constructUpdateParams(todoItem, updateTodoRequest)
-        console.log("Update params: ", params)
+        logger.info(`Update params: ${params}`)
         await this.docClient.update(params, function(err, data) {
             if (err) {
                 logger.error("Unable to update todo item. Error JSON:", JSON.stringify(err, null, 2));
                 throw new Error("Unable to update todo item: " + err.message)
             } else {
-                logger.info("Update succeeded:", JSON.stringify(data, null, 2));
+                logger.info(`Update succeeded:, ${JSON.stringify(data)}`);
             }
         }).promise();
-
     }
 
     async deleteTodoItem(todoItem: TodoItem) {
@@ -91,11 +90,12 @@ export class todoAccess {
                 "userId": p_todoItem.userId,
                 "todoId": p_todoItem.todoId,
             },
-            UpdateExpression: "SET #_name = :n, dueDate = :dd, done = :d",
+            UpdateExpression: "SET #_name = :n, dueDate = :dd, done = :d, attachmentUrl = :a",
             ExpressionAttributeValues: {
                 ":n": p_newValues.name,
                 ":dd": p_newValues.dueDate,
-                ":d" : p_newValues.done
+                ":d" : p_newValues.done,
+                ":a" : p_newValues.attachmentUrl
             },
             ExpressionAttributeNames: {
                 "#_name": "name"

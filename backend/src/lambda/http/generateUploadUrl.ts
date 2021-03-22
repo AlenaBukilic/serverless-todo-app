@@ -3,6 +3,8 @@ import 'source-map-support/register'
 import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } from 'aws-lambda';
 import * as AWS from 'aws-sdk';
 import { createLogger } from '../../utils/logger';
+import { getTodoItemById, updateTodoItemForUser } from '../../bussinesLayer/todo';
+import { getUserId } from '../utils';
 
 const logger = createLogger('createTodo');
 
@@ -19,10 +21,20 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     const { todoId } = event.pathParameters;
     const url = getUploadUrl(todoId);
 
+    const todoItem = await getTodoItemById(todoId);
+
+    const updatedItem = {
+        ...todoItem,
+        attachmentUrl: `https://${bucketName}.s3.amazonaws.com/${todoId}`
+    };
+
+    await updateTodoItemForUser(getUserId(event), todoId, updatedItem);
+
     return {
-        statusCode: 200,
+        statusCode: 201,
         headers: {
             'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': true
         },
         body: JSON.stringify({
             uploadUrl: url
@@ -34,6 +46,6 @@ function getUploadUrl(imageTodoId: string) {
     return s3.getSignedUrl('putObject', {
         Bucket: bucketName,
         Key: imageTodoId,
-        Expires: urlExpiration
+        Expires: Number(urlExpiration)
     })
   }
