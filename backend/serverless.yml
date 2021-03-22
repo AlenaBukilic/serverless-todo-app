@@ -9,6 +9,17 @@ provider:
   name: aws
   runtime: nodejs14.x
 
+  tracing:
+    lambda: true
+    apiGateway: true
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
 

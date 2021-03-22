@@ -4,14 +4,17 @@ import { UpdateTodoRequest } from "../requests/UpdateTodoRequest";
 import { CreateTodoRequest } from "../requests/CreateTodoRequest";
 
 import * as AWS from "aws-sdk";
+import * as AWSXRay from 'aws-xray-sdk';
 import { createLogger } from "../utils/logger";
 import { DocumentClient } from "aws-sdk/clients/dynamodb";
+
+const XAWS = AWSXRay.captureAWS(AWS);
 
 const logger = createLogger('todoAccess')
 
 export class todoAccess {
     constructor(
-        private readonly docClient: DocumentClient = new AWS.DynamoDB.DocumentClient(),
+        private readonly docClient: DocumentClient = new XAWS.DynamoDB.DocumentClient(),
         private readonly todoTable: string = process.env.TODOS_TABLE,
         private readonly todoIdIndex: string = process.env.TODO_ID_INDEX) {
     }
@@ -61,7 +64,7 @@ export class todoAccess {
 
     async updateTodoItem(todoItem: TodoItem, updateTodoRequest: UpdateTodoRequest) {
 
-        const params = this.constructUpdateParams(todoItem, updateTodoRequest)
+        const params = updateTodoRequest.attachmentUrl ? this.constructUpdateUrlParams(todoItem, updateTodoRequest) : this.constructUpdateParams(todoItem, updateTodoRequest)
         logger.info(`Update params: ${params}`)
         await this.docClient.update(params, function(err, data) {
             if (err) {
@@ -90,15 +93,31 @@ export class todoAccess {
                 "userId": p_todoItem.userId,
                 "todoId": p_todoItem.todoId,
             },
-            UpdateExpression: "SET #_name = :n, dueDate = :dd, done = :d, attachmentUrl = :a",
+            UpdateExpression: "SET #_name = :n, dueDate = :dd, done = :d",
             ExpressionAttributeValues: {
                 ":n": p_newValues.name,
                 ":dd": p_newValues.dueDate,
-                ":d" : p_newValues.done,
-                ":a" : p_newValues.attachmentUrl
+                ":d" : p_newValues.done
             },
             ExpressionAttributeNames: {
                 "#_name": "name"
+            }
+        }
+    }
+
+    constructUpdateUrlParams(p_todoItem, p_newValues) {
+        return {
+            TableName: this.todoTable,
+            Key: {
+                "userId": p_todoItem.userId,
+                "todoId": p_todoItem.todoId,
+            },
+            UpdateExpression: "SET #_attachmentUrl = :a",
+            ExpressionAttributeValues: {
+                ":a" : p_newValues.attachmentUrl
+            },
+            ExpressionAttributeNames: {
+                "#_attachmentUrl": "attachmentUrl"
             }
         }
     }
